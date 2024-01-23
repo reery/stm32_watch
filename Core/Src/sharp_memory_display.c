@@ -24,7 +24,6 @@ uint8_t backBuffer[DISPLAY_HEIGHT][DISPLAY_WIDTH / 8] __attribute__((aligned(4))
 uint8_t (*currentBuffer)[DISPLAY_WIDTH / 8] = backBuffer;
 uint8_t sendToDisplayBuffer[TOTAL_DATA_SIZE];
 
-
 void clearDisplay(void) {
 	SCS_HIGH();
 	HAL_SPI_Transmit(&hspi1, &clear_command, 1, HAL_MAX_DELAY);
@@ -47,12 +46,13 @@ void init_display(void) {
 	// Step 4
 }
 
-void toggle_vcom(void) {
+unsigned int toggle_vcom(void) {
 	SCS_HIGH();
 	vcom_bit ^= 0x40;
 	HAL_SPI_Transmit(&hspi1, &vcom_bit, 1, HAL_MAX_DELAY);
 	HAL_SPI_Transmit(&hspi1, &dummy_8bit, 1, HAL_MAX_DELAY);
 	SCS_LOW();
+	return vcom_bit;
 }
 
 // Working perfectly, slowest SPI write method
@@ -80,7 +80,7 @@ void writeDisplayBuffer(void) {
 }
 
 // This uses a more efficient SPI transfer method
-void sendToDisplay(void) {
+unsigned int sendToDisplay(void) {
 	uint8_t* sendBufferPtr = sendToDisplayBuffer;
 	*sendBufferPtr++ = write_mode;
 
@@ -103,12 +103,14 @@ void sendToDisplay(void) {
 
 	HAL_SPI_Transmit(&hspi1, sendToDisplayBuffer, TOTAL_DATA_SIZE, HAL_MAX_DELAY);
 	SCS_LOW();
+	//updateBuffer();
 	//currentBuffer = (currentBuffer == frontBuffer) ? backBuffer : frontBuffer;
 	initCurrentBuffer();
 
 	RED_LED_OFF();
 
-	toggle_vcom();
+	int vcom_bit = toggle_vcom();
+	return vcom_bit;
 }
 
 // Should be even faster, unblocks the CPU from the transfer task
@@ -231,14 +233,14 @@ void setPixel(int x, int y, bool color) {
 }
 
 void setPixel_BB(int x, int y, bool color) {
-	int byteIndex = x / 8;
-	int bitIndex = 7 - (x % 8);
+	int byteIndex = x >> 3; // byteIndex = x / 8
+	int bitIndex = 7 - (x & 7); // bitIndex = 7 - (x % 8)
 
 	// Calculate the byte offset within the buffer
-	uint32_t byte_offset = (uint32_t)&currentBuffer[y][byteIndex] - SRAM_BASE;//- (uint32_t)&currentBuffer[0][0];
+	uint32_t byte_offset = (uint32_t)&currentBuffer[y][byteIndex] - SRAM_BASE;
 
 	// Calculate the bit_word_offset and bit_band_alias_address
-	uint32_t bit_word_offset = (byte_offset) * 32 + (bitIndex * 4);
+	uint32_t bit_word_offset = (byte_offset << 5) + (bitIndex << 2); // bit_word_offset = (byte_offset) * 32 + (bitIndex * 4)
 	uint32_t bit_band_alias_address = SRAM_BB_BASE + bit_word_offset;
 
 	// Use bit-banding to set or clear the bit
@@ -246,35 +248,6 @@ void setPixel_BB(int x, int y, bool color) {
 }
 
 void drawChar(int x, int y, char c, bool color) {
-    // Get the index of the character in the font arrays
-    int charIndex = c - 33; // Assuming '!' (char 33) is the first character in your font
-
-    // Get the character width and bitmap address
-    int width = char_width[charIndex];
-    const char* bitmap = char_addr[charIndex];
-
-    // Iterate over each vertical slice (column) in the character's bitmap
-    for (int col = 0; col < width; col++) {
-        // Iterate over each row in the character's bitmap
-        for (int row = 0; row < 48; row++) { // Assuming 24 pixels in height
-            // Calculate the position of the pixel on the display
-            int displayX = x + col;  // X position is based on the column (width)
-            int displayY = y + row;  // Y position is based on the row (height)
-
-            // Calculate the position in the bitmap array and the bit index
-            int bitmapIndex = col + (row / 8) * width;  // Index in bitmap array
-            int bitIndex = row % 8;  // Bit index within the byte, assuming LSB to MSB ordering
-
-            // Check if the pixel should be drawn (based on the bitmap data)
-            // Note: The pixel is drawn if the corresponding bit in the bitmap is set
-            if (bitmap[bitmapIndex] & (1 << bitIndex)) {
-            	setPixel_BB(displayX, displayY, color); // Draw the pixel
-            }
-        }
-    }
-}
-
-void drawChar_optimized(int x, int y, char c, bool color) {
 	// Get the index of the character in the font arrays
 	int charIndex = c - 33; // Assuming '!' (char 33) is the first character in your font
 
@@ -316,9 +289,22 @@ void drawChar_optimized(int x, int y, char c, bool color) {
 
 void drawString(int x, int y, const char* str, bool color) {
     while (*str) {
-        drawChar_optimized(x, y, *str, color);
+        drawChar(x, y, *str, color);
         x += char_width[*str - 33] + 1; // Move x to the next character position
         str++; // Next character
+    }
+}
+
+void numToString(int x, int y, int number, char *format, bool color) {
+	char str[16];
+	char *string_pointer = str;
+	char finalFormat[8];
+	snprintf(finalFormat, sizeof(finalFormat), "%%%s", format);
+	sprintf(str, finalFormat, number);
+	while (*string_pointer) {
+        drawChar(x, y, *string_pointer, color);
+        x += char_width[*string_pointer - 33] + 1; // Move x to the next character position
+        string_pointer++; // Next character
     }
 }
 

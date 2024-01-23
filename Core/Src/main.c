@@ -113,6 +113,8 @@ int main(void)
   char str[12];
   uint32_t startTime1 = 0;
   char str1[12];
+  char str2[12];
+  int vcom_bit = 0;
 
   /* USER CODE END 2 */
 
@@ -120,80 +122,18 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  /*fillSquare(50, 50, 50, 1);
-	  sendToDisplay();
-	  HAL_Delay(1000);
-	  fillSquare(101, 50, 50, 1);
-	  sendToDisplay();
-	  HAL_Delay(1000);
-	  drawLine_H(50, 101, 101, 1);
-	  sendToDisplay();
-	  HAL_Delay(1000);
-	  drawLine_V(48, 50, 50, 1);
-	  sendToDisplay();
-	  HAL_Delay(1000);
-	  setPixel(120, 120, 1);
-	  sendToDisplay();
-	  HAL_Delay(1000);
-	  drawLine(121, 121, 200, 200, 1);
-	  sendToDisplay();
-	  HAL_Delay(1000);
-	  drawCircle(120, 120, 30, 1);
-	  sendToDisplay();
-	  HAL_Delay(1000);
-	  fillRectangle(48, 170, 103, 20, 1);
-	  sendToDisplay();
-	  HAL_Delay(1000);
-	  fillCircle(170, 75, 15, 1);
-	  sendToDisplay();
-	  HAL_Delay(1000);
-	  invertDisplayBuffer();
-	  sendToDisplay();
-	  HAL_Delay(1000);*/
+
 	  if (HAL_GetTick() - startTime >= interval) {
 		 seconds++;
-		 //clear_display();
-		 //initDisplayBuffer();
 		 startTime1 = HAL_GetTick();
 		 drawString(30, 60, "Schnuffi", 1);
 		 drawString(30, 100, "Schnuffi", 1);
-		 drawString(30, 140, "Schnuffi", 1);
+		 numToString(30, 140, vcom_bit, "u", 1);
 		 startTime1 = HAL_GetTick() - startTime1;
-		 sprintf(str1, "%lu ms", startTime1);
-		 drawString(80, 20, str1, 1);
-		 sendToDisplay();
+		 numToString(80, 20, startTime1, "lu", 1);
+		 vcom_bit = sendToDisplay();
 		 HAL_Delay(1000);
 	  }
-
-
-	/*
-	initDisplayBuffer();
-	//writeDisplayBuffer();
-	sendToDisplay();
-	HAL_Delay(1000);
-	drawSomething();
-	//writeDisplayBuffer();
-	sendToDisplay();
-	HAL_Delay(1000);
-	invertDisplayBuffer();
-	//writeDisplayBuffer();
-	sendToDisplay();
-	HAL_Delay(1000);
-	initDisplayBuffer();
-	//writeDisplayBuffer();
-	sendToDisplay();
-	drawSquare(70, 70, 10, 1);
-	//writeDisplayBuffer();
-	sendToDisplay();
-	HAL_Delay(1000);
-	invertDisplayBuffer();
-	//writeDisplayBuffer();
-	sendToDisplay();
-	HAL_Delay(500);
-	drawRectangle(20, 180, 10, 10, 0);
-	//writeDisplayBuffer();
-	sendToDisplay();
-	HAL_Delay(1000); */
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

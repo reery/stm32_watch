@@ -45,13 +45,13 @@
 // Sharp memory display functions
 void init_display(void);
 void clearDisplay(void);
-void toggle_vcom(void);
+unsigned int toggle_vcom(void);
 void writeDisplayBuffer(void);
 void drawSomething(void);
 void invertDisplayBuffer(void);
 void initDisplayBuffer(void);
 void initCurrentBuffer(void);
-void sendToDisplay(void);
+unsigned int sendToDisplay(void);
 void sendToDisplay_DMA(void);
 
 // GFX functions - will probably get their own header file
@@ -65,8 +65,8 @@ void setPixel_BB(int x, int y, bool);
 void drawCircle(int, int, int, bool);
 void fillCircle(int, int, int, bool);
 void drawChar(int x, int y, char c, bool color);
-void drawChar_optimized(int x, int y, char c, bool color);
 void drawString(int x, int y, const char* str, bool color);
+void numToString(int x, int y, int number, char *format, bool color);
 
 // Debug, test and performance functions
 
