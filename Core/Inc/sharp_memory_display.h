@@ -15,6 +15,7 @@
 #define TOTAL_DATA_SIZE (1 /* write mode */ + DISPLAY_HEIGHT * LINE_DATA_SIZE + 2 /* final dummy bits */)
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #define DISP_PORT		GPIOA
 #define DISP_PIN		GPIO_PIN_8
@@ -51,7 +52,9 @@ void drawSomething(void);
 void invertDisplayBuffer(void);
 void initDisplayBuffer(void);
 void initCurrentBuffer(void);
+void resetCurrentBuffer(uint8_t x_start, uint8_t x_end);
 unsigned int sendToDisplay(void);
+unsigned int updateDisplay(uint8_t x_start, uint8_t x_end);
 void sendToDisplay_DMA(void);
 
 // GFX functions - will probably get their own header file

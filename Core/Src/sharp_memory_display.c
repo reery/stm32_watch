@@ -113,6 +113,39 @@ unsigned int sendToDisplay(void) {
 	return vcom_bit;
 }
 
+unsigned int updateDisplay(uint8_t x_start, uint8_t x_end) {
+	uint8_t* sendBufferPtr = sendToDisplayBuffer;
+	*sendBufferPtr++ = write_mode;
+
+	for (uint8_t line = x_start; line <= x_end; line++) {
+	    // Send line address inverted
+	    uint8_t line_address = (uint8_t)(__RBIT((uint8_t)(line)) >> 24);
+	    *sendBufferPtr++ = line_address;
+
+	    // Add pixel data from displayBuffer -> to improve this all the gfx code could modify only the bufferPtr/sendToDisplayBuffer
+	    memcpy(sendBufferPtr, currentBuffer[line - 1], DISPLAY_WIDTH / 8);
+	    sendBufferPtr += DISPLAY_WIDTH / 8;
+
+	    // Send 8 dummy bits after each line's pixel data
+	    *sendBufferPtr++ = dummy_8bit;
+	}
+	*sendBufferPtr++ = dummy_16bit;
+
+	RED_LED_ON();
+	SCS_HIGH();
+
+	HAL_SPI_Transmit(&hspi1, sendToDisplayBuffer, TOTAL_DATA_SIZE, HAL_MAX_DELAY);
+	SCS_LOW();
+	//updateBuffer();
+	//currentBuffer = (currentBuffer == frontBuffer) ? backBuffer : frontBuffer;
+	//initCurrentBuffer();
+	resetCurrentBuffer(x_start, x_end);
+	RED_LED_OFF();
+
+	int vcom_bit = toggle_vcom();
+	return vcom_bit;
+}
+
 // Should be even faster, unblocks the CPU from the transfer task
 // !!! Unfinished function, needs interrupt and transfer handling !!!
 void sendToDisplay_DMA(void) {
@@ -324,6 +357,12 @@ void initDisplayBuffer(void) {
 
 void initCurrentBuffer(void) {
 	memset(currentBuffer, 0xFF, DISPLAY_HEIGHT * (DISPLAY_WIDTH / 8));
+}
+
+void resetCurrentBuffer(uint8_t x_start, uint8_t x_end) {
+	for (int i = x_start; i <= x_end; i++) {
+		memset(currentBuffer[i], 0xFF, sizeof(currentBuffer[i]));
+	}
 }
 
 void drawSomething(void) {
