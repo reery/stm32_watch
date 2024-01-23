@@ -52,9 +52,9 @@ void drawSomething(void);
 void invertDisplayBuffer(void);
 void initDisplayBuffer(void);
 void initCurrentBuffer(void);
-void resetCurrentBuffer(uint8_t x_start, uint8_t x_end);
+void resetCurrentBuffer(uint8_t y_start, uint8_t y_end);
 unsigned int sendToDisplay(void);
-unsigned int updateDisplay(uint8_t x_start, uint8_t x_end);
+unsigned int updateDisplay(uint8_t y_start, uint8_t y_end);
 void sendToDisplay_DMA(void);
 
 // GFX functions - will probably get their own header file

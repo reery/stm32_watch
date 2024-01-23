@@ -113,11 +113,11 @@ unsigned int sendToDisplay(void) {
 	return vcom_bit;
 }
 
-unsigned int updateDisplay(uint8_t x_start, uint8_t x_end) {
+unsigned int updateDisplay(uint8_t y_start, uint8_t y_end) {
 	uint8_t* sendBufferPtr = sendToDisplayBuffer;
 	*sendBufferPtr++ = write_mode;
 
-	for (uint8_t line = x_start; line <= x_end; line++) {
+	for (uint8_t line = y_start; line <= y_end; line++) {
 	    // Send line address inverted
 	    uint8_t line_address = (uint8_t)(__RBIT((uint8_t)(line)) >> 24);
 	    *sendBufferPtr++ = line_address;
@@ -139,7 +139,7 @@ unsigned int updateDisplay(uint8_t x_start, uint8_t x_end) {
 	//updateBuffer();
 	//currentBuffer = (currentBuffer == frontBuffer) ? backBuffer : frontBuffer;
 	//initCurrentBuffer();
-	resetCurrentBuffer(x_start, x_end);
+	resetCurrentBuffer(y_start, y_end);
 	RED_LED_OFF();
 
 	int vcom_bit = toggle_vcom();
@@ -359,8 +359,8 @@ void initCurrentBuffer(void) {
 	memset(currentBuffer, 0xFF, DISPLAY_HEIGHT * (DISPLAY_WIDTH / 8));
 }
 
-void resetCurrentBuffer(uint8_t x_start, uint8_t x_end) {
-	for (int i = x_start; i <= x_end; i++) {
+void resetCurrentBuffer(uint8_t y_start, uint8_t y_end) {
+	for (int i = y_start; i <= y_end; i++) {
 		memset(currentBuffer[i], 0xFF, sizeof(currentBuffer[i]));
 	}
 }
