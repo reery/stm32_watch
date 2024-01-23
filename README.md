@@ -3,7 +3,11 @@ Hardware used:
 - Sharp LS012B7DH02 Memory Display
 
 Goal of this project:
-An extremely power efficient Bluetooth enabled smartwatch with an as thin as possible casing.
+* Bluetooth enabled smartwatch
+* Apps, watchfaces and firmware updates over Bluetooth
+* Easy user implementation of additions
+* Extreme power effciency (<3 µA average for normal operation, at least 365 days runtime on a CR3032 battery)
+* Watch casing thinner than 8-9 mm
 
 Active todos:
 * Improve GFX functions to use memset()
