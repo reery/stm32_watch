@@ -40,7 +40,7 @@
 #define RED_LED_ON()	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET)
 #define RED_LED_OFF()	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET)
 
-// Optimizations
+// Needed for bit-banding feature in drawChar function
 #define SRAM_BB_BASE 0x22000000
 
 // Sharp memory display functions

@@ -92,7 +92,7 @@ void HAL_LPTIM_MspInit(LPTIM_HandleTypeDef* hlptim)
   /** Initializes the peripherals clock
   */
     PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_LPTIM1;
-    PeriphClkInitStruct.Lptim1ClockSelection = RCC_LPTIM1CLKSOURCE_LSE;
+    PeriphClkInitStruct.Lptim1ClockSelection = RCC_LPTIM1CLKSOURCE_LSI;
     if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
     {
       Error_Handler();
@@ -122,6 +122,9 @@ void HAL_LPTIM_MspDeInit(LPTIM_HandleTypeDef* hlptim)
   /* USER CODE END LPTIM1_MspDeInit 0 */
     /* Peripheral clock disable */
     __HAL_RCC_LPTIM1_CLK_DISABLE();
+
+    /* LPTIM1 interrupt DeInit */
+    HAL_NVIC_DisableIRQ(LPTIM1_IRQn);
   /* USER CODE BEGIN LPTIM1_MspDeInit 1 */
 
   /* USER CODE END LPTIM1_MspDeInit 1 */
