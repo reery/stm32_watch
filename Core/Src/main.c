@@ -43,6 +43,8 @@
 /* Private variables ---------------------------------------------------------*/
 LPTIM_HandleTypeDef hlptim1;
 
+RTC_HandleTypeDef hrtc;
+
 SPI_HandleTypeDef hspi1;
 
 UART_HandleTypeDef huart1;
@@ -52,7 +54,7 @@ PCD_HandleTypeDef hpcd_USB_FS;
 /* USER CODE BEGIN PV */
 uint32_t uptime = 0;
 
-void HAL_LPTIM_AutoReloadMatchCallback(LPTIM_HandleTypeDef *hlptim)
+/*void HAL_LPTIM_AutoReloadMatchCallback(LPTIM_HandleTypeDef *hlptim)
 {
 	if (hlptim->Instance == LPTIM1)
 	{
@@ -62,6 +64,15 @@ void HAL_LPTIM_AutoReloadMatchCallback(LPTIM_HandleTypeDef *hlptim)
 		numToString(30, 140, uptime, "lu", 1);
 		updateDisplay(140, 188);
 	}
+}*/
+
+void HAL_RTCEx_WakeUpTimerEventCallback(RTC_HandleTypeDef *hrtc)
+{
+    // Actions to be taken every second
+	BLUE_LED_ON();
+	uptime++;
+	numToString(30, 140, uptime, "lu", 1);
+	updateDisplay(140, 188);
 }
 /* USER CODE END PV */
 
@@ -73,6 +84,7 @@ static void MX_USART1_UART_Init(void);
 static void MX_USB_PCD_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_LPTIM1_Init(void);
+static void MX_RTC_Init(void);
 static void MX_NVIC_Init(void);
 /* USER CODE BEGIN PFP */
 
@@ -119,6 +131,7 @@ int main(void)
   MX_USB_PCD_Init();
   MX_SPI1_Init();
   MX_LPTIM1_Init();
+  MX_RTC_Init();
 
   /* Initialize interrupts */
   MX_NVIC_Init();
@@ -288,8 +301,11 @@ void PeriphCommonClock_Config(void)
 static void MX_NVIC_Init(void)
 {
   /* LPTIM1_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(LPTIM1_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(LPTIM1_IRQn);
+  //HAL_NVIC_SetPriority(LPTIM1_IRQn, 0, 0);
+  //HAL_NVIC_EnableIRQ(LPTIM1_IRQn);
+
+  HAL_NVIC_SetPriority(RTC_WKUP_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(RTC_WKUP_IRQn);
 }
 
 /**
@@ -324,12 +340,84 @@ static void MX_LPTIM1_Init(void)
   //HAL_NVIC_SetPriority(LPTIM1_IRQn, 0, 0);
   //HAL_NVIC_EnableIRQ(LPTIM1_IRQn);
   //HAL_LPTIM_IRQHandler(&hlptim1);
-  if (HAL_LPTIM_Counter_Start_IT(&hlptim1, 1024) != HAL_OK)
+  /*if (HAL_LPTIM_Counter_Start_IT(&hlptim1, 1024) != HAL_OK)
     {
         // Starting Error
         Error_Handler();
-    }
+    }*/
   /* USER CODE END LPTIM1_Init 2 */
+
+}
+
+/**
+  * @brief RTC Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_RTC_Init(void)
+{
+
+  /* USER CODE BEGIN RTC_Init 0 */
+
+  /* USER CODE END RTC_Init 0 */
+
+  RTC_TimeTypeDef sTime = {0};
+  RTC_DateTypeDef sDate = {0};
+
+  /* USER CODE BEGIN RTC_Init 1 */
+
+  /* USER CODE END RTC_Init 1 */
+
+  /** Initialize RTC Only
+  */
+  hrtc.Instance = RTC;
+  hrtc.Init.HourFormat = RTC_HOURFORMAT_24;
+  hrtc.Init.AsynchPrediv = 127;
+  hrtc.Init.SynchPrediv = 255;
+  hrtc.Init.OutPut = RTC_OUTPUT_DISABLE;
+  hrtc.Init.OutPutPolarity = RTC_OUTPUT_POLARITY_HIGH;
+  hrtc.Init.OutPutType = RTC_OUTPUT_TYPE_OPENDRAIN;
+  hrtc.Init.OutPutRemap = RTC_OUTPUT_REMAP_NONE;
+  if (HAL_RTC_Init(&hrtc) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /* USER CODE BEGIN Check_RTC_BKUP */
+
+  /* USER CODE END Check_RTC_BKUP */
+
+  /** Initialize RTC and set the Time and Date
+  */
+  sTime.Hours = 0x22;
+  sTime.Minutes = 0x15;
+  sTime.Seconds = 0x0;
+  sTime.SubSeconds = 0x0;
+  sTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
+  sTime.StoreOperation = RTC_STOREOPERATION_RESET;
+  if (HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BCD) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sDate.WeekDay = RTC_WEEKDAY_WEDNESDAY;
+  sDate.Month = RTC_MONTH_JANUARY;
+  sDate.Date = 0x31;
+  sDate.Year = 0x24;
+
+  if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BCD) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Enable the WakeUp
+  */
+  if (HAL_RTCEx_SetWakeUpTimer_IT(&hrtc, 0, RTC_WAKEUPCLOCK_CK_SPRE_16BITS) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN RTC_Init 2 */
+
+  /* USER CODE END RTC_Init 2 */
 
 }
 

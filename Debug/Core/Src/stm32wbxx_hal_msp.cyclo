@@ -1,3 +1,5 @@
+../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_ll_rcc.h:2883:22:LL_RCC_EnableRTC	1
+../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_ll_rcc.h:2893:22:LL_RCC_DisableRTC	1
 ../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_ll_bus.h:539:22:LL_AHB2_GRP1_EnableClock	1
 ../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_ll_bus.h:939:22:LL_APB1_GRP1_EnableClock	1
 ../Drivers/STM32WBxx_HAL_Driver/Inc/stm32wbxx_ll_bus.h:1038:22:LL_APB1_GRP1_DisableClock	1
@@ -6,9 +8,11 @@
 ../Core/Src/stm32wbxx_hal_msp.c:64:6:HAL_MspInit	1
 ../Core/Src/stm32wbxx_hal_msp.c:83:6:HAL_LPTIM_MspInit	3
 ../Core/Src/stm32wbxx_hal_msp.c:116:6:HAL_LPTIM_MspDeInit	2
-../Core/Src/stm32wbxx_hal_msp.c:141:6:HAL_SPI_MspInit	2
-../Core/Src/stm32wbxx_hal_msp.c:177:6:HAL_SPI_MspDeInit	2
-../Core/Src/stm32wbxx_hal_msp.c:206:6:HAL_UART_MspInit	3
-../Core/Src/stm32wbxx_hal_msp.c:253:6:HAL_UART_MspDeInit	2
-../Core/Src/stm32wbxx_hal_msp.c:282:6:HAL_PCD_MspInit	3
-../Core/Src/stm32wbxx_hal_msp.c:333:6:HAL_PCD_MspDeInit	2
+../Core/Src/stm32wbxx_hal_msp.c:141:6:HAL_RTC_MspInit	3
+../Core/Src/stm32wbxx_hal_msp.c:182:6:HAL_RTC_MspDeInit	2
+../Core/Src/stm32wbxx_hal_msp.c:208:6:HAL_SPI_MspInit	2
+../Core/Src/stm32wbxx_hal_msp.c:244:6:HAL_SPI_MspDeInit	2
+../Core/Src/stm32wbxx_hal_msp.c:273:6:HAL_UART_MspInit	3
+../Core/Src/stm32wbxx_hal_msp.c:320:6:HAL_UART_MspDeInit	2
+../Core/Src/stm32wbxx_hal_msp.c:349:6:HAL_PCD_MspInit	3
+../Core/Src/stm32wbxx_hal_msp.c:400:6:HAL_PCD_MspDeInit	2
