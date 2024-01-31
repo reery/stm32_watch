@@ -15,6 +15,7 @@
 #define TOTAL_DATA_SIZE (1 /* write mode */ + DISPLAY_HEIGHT * LINE_DATA_SIZE + 2 /* final dummy bits */)
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #define DISP_PORT		GPIOA
 #define DISP_PIN		GPIO_PIN_8
@@ -39,7 +40,7 @@
 #define RED_LED_ON()	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET)
 #define RED_LED_OFF()	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET)
 
-// Optimizations
+// Needed for bit-banding feature in drawChar function
 #define SRAM_BB_BASE 0x22000000
 
 // Sharp memory display functions
@@ -51,7 +52,9 @@ void drawSomething(void);
 void invertDisplayBuffer(void);
 void initDisplayBuffer(void);
 void initCurrentBuffer(void);
+void resetCurrentBuffer(uint8_t y_start, uint8_t y_end);
 unsigned int sendToDisplay(void);
+unsigned int updateDisplay(uint8_t y_start, uint8_t y_end);
 void sendToDisplay_DMA(void);
 
 // GFX functions - will probably get their own header file
