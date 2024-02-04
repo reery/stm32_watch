@@ -47,10 +47,10 @@ void init_display(void) {
 }
 
 unsigned int toggle_vcom(void) {
-	SCS_HIGH();
 	vcom_bit ^= 0x40;
-	HAL_SPI_Transmit(&hspi1, &vcom_bit, 1, HAL_MAX_DELAY);
-	HAL_SPI_Transmit(&hspi1, &dummy_8bit, 1, HAL_MAX_DELAY);
+	uint8_t buffer[2] = {vcom_bit, 0x00};
+	SCS_HIGH();
+	HAL_SPI_Transmit(&hspi1, buffer, 2, HAL_MAX_DELAY);
 	SCS_LOW();
 	return vcom_bit;
 }
@@ -117,7 +117,8 @@ unsigned int updateDisplay(uint8_t y_start, uint8_t y_end) {
 	uint8_t* sendBufferPtr = sendToDisplayBuffer;
 	*sendBufferPtr++ = write_mode;
 
-	for (uint8_t line = y_start; line <= y_end; line++) {
+	// 1 ms for the loop
+	for (uint8_t line = y_start - 1; line <= y_end; line++) {
 	    // Send line address inverted
 	    uint8_t line_address = (uint8_t)(__RBIT((uint8_t)(line)) >> 24);
 	    *sendBufferPtr++ = line_address;
@@ -133,13 +134,13 @@ unsigned int updateDisplay(uint8_t y_start, uint8_t y_end) {
 
 	RED_LED_ON();
 	SCS_HIGH();
-
-	HAL_SPI_Transmit(&hspi1, sendToDisplayBuffer, TOTAL_DATA_SIZE, HAL_MAX_DELAY);
+	HAL_SPI_Transmit(&hspi1, sendToDisplayBuffer, TOTAL_DATA_SIZE, HAL_MAX_DELAY); // 16 ms for the SPI transfer
 	SCS_LOW();
 	//updateBuffer();
 	//currentBuffer = (currentBuffer == frontBuffer) ? backBuffer : frontBuffer;
 	//initCurrentBuffer();
-	resetCurrentBuffer(y_start, y_end);
+
+	resetCurrentBufferLines(y_start, y_end); // 1 ms
 	RED_LED_OFF();
 
 	int vcom_bit = toggle_vcom();
@@ -152,7 +153,7 @@ void sendToDisplay_DMA(void) {
 
 }
 
-void fillSquare(int start_position_x, int start_position_y, int square_size, bool color) {
+/*void fillSquare(int start_position_x, int start_position_y, int square_size, bool color) {
     // Loop over each row of the square
     for (int row = start_position_y - 1; row < start_position_y - 1 + square_size; row++) {
         // Check if row is within the display bounds
@@ -161,7 +162,7 @@ void fillSquare(int start_position_x, int start_position_y, int square_size, boo
         // Loop over each column of the square
         for (int col = start_position_x - 1; col < start_position_x - 1 + square_size; col++) {
             // Check if col is within the display bounds
-            if (col < 0 || col >= DISPLAY_WIDTH) continue;
+            //if (col < 0 || col >= DISPLAY_WIDTH) continue;
 
             int byteIndex = col / 8;  // Find the byte in which the pixel resides
             int bitIndex = 7 - (col % 8);   // Find the position of the pixel within that byte
@@ -173,6 +174,47 @@ void fillSquare(int start_position_x, int start_position_y, int square_size, boo
 				// Clear the bit to erase a pixel (assuming 1 is the color for erasing)
 				currentBuffer[row][byteIndex] |= (1 << bitIndex);
 			}
+        }
+    }
+}*/
+
+void fillSquare(int start_position_x, int start_position_y, int square_size, bool color) {
+	int col = start_position_x - 1;
+	int lastBytePosition = (col + square_size) >> 3; // (col + square_size) / 8
+	int lastBitPosition = 7 - ((col + square_size) & 7); // 7 - ((col + square_size) % 8
+	int byteIndex = col >> 3; // byteIndex = x / 8
+	int bitIndex = 7 - (col & 7); // bitIndex = 7 - (x % 8)
+	int columnsToMemset = 0;
+	uint8_t memsetColor = 0x0;
+	if (color == 0) {
+		memsetColor = 0xF;
+	}
+
+	if (lastBitPosition == 7) {
+		columnsToMemset = lastBytePosition - byteIndex;
+	} else {
+		columnsToMemset = lastBytePosition - byteIndex - 1;
+	}
+    // Loop over each row of the square
+    for (int row = start_position_y - 1; row < start_position_y + square_size; row++) {
+        // Loop over each column of the square
+        for (col = start_position_x - 1; col < start_position_x + square_size; col++) {
+        	byteIndex = col >> 3; // byteIndex = x / 8
+        	bitIndex = 7 - (col & 7); // bitIndex = 7 - (x % 8)
+
+            if (bitIndex == 7 && byteIndex != lastBytePosition) {
+            	memset(&currentBuffer[row][byteIndex], memsetColor, columnsToMemset);
+            	col = col - 1 + (columnsToMemset * 8);
+            	//columnsToMemset = 0;
+            	continue;
+            }
+            // Calculate the byte offset within the buffer
+            uint32_t byte_offset = (uint32_t)&currentBuffer[row][byteIndex] - SRAM_BASE;
+
+            // Calculate the bit_word_offset and bit_band_alias_address
+            uint32_t bit_word_offset = (byte_offset << 5) + (bitIndex << 2); // bit_word_offset = (byte_offset) * 32 + (bitIndex * 4)
+            uint32_t bit_band_alias_address = SRAM_BB_BASE + bit_word_offset;
+            *(volatile uint32_t *)bit_band_alias_address = (color ? 0 : 1);
         }
     }
 }
@@ -204,8 +246,7 @@ void fillRectangle(int start_position_x, int start_position_y, int length_x, int
 }
 
 void drawLine_H(int start_position_x, int start_position_y, int length, bool color) {
-	for (int col = start_position_x - 1; col < start_position_x - 1 + length; col++) {
-		if (col < 0 || col >= DISPLAY_WIDTH) continue;
+	for (int col = start_position_x - 1; col < start_position_x + length; col++) {
 
 		int byteIndex = col / 8;
 		int bitIndex = 7 - (col % 8);
@@ -222,7 +263,7 @@ void drawLine_H(int start_position_x, int start_position_y, int length, bool col
 }
 
 void drawLine_V(int start_position_x, int start_position_y, int length, bool color) {
-	for (int row = start_position_y - 1; row < start_position_y - 1 + length; row++) {
+	for (int row = start_position_y - 1; row < start_position_y + length; row++) {
 		if (row < 0 || row >= DISPLAY_HEIGHT) continue;
 
 		int byteIndex = (start_position_x - 1) / 8;
@@ -244,7 +285,7 @@ void drawLine(int x0, int y0, int x1, int y1, bool color) {
     int dy = -abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
     int err = dx + dy, e2; /* error value e_xy */
     for (;;) {  /* loop */
-        setPixel(x0, y0, color);
+        setPixel_BB(x0, y0, color);
         if (x0 == x1 && y0 == y1) break;
         e2 = 2 * err;
         if (e2 >= dy) { err += dy; x0 += sx; } /* e_xy+e_x > 0 */
@@ -359,7 +400,7 @@ void initCurrentBuffer(void) {
 	memset(currentBuffer, 0xFF, DISPLAY_HEIGHT * (DISPLAY_WIDTH / 8));
 }
 
-void resetCurrentBuffer(uint8_t y_start, uint8_t y_end) {
+void resetCurrentBufferLines(uint8_t y_start, uint8_t y_end) {
 	for (int i = y_start; i <= y_end; i++) {
 		memset(currentBuffer[i], 0xFF, sizeof(currentBuffer[i]));
 	}
@@ -383,14 +424,14 @@ void drawCircle(int centerX, int centerY, int radius, bool color) {
     int decisionOver2 = 1 - x;   // Decision criterion divided by 2 evaluated at x=r, y=0
 
     while (y <= x) {
-        setPixel(centerX + x, centerY + y, color); // Octant 1
-        setPixel(centerX + y, centerY + x, color); // Octant 2
-        setPixel(centerX - y, centerY + x, color); // Octant 3
-        setPixel(centerX - x, centerY + y, color); // Octant 4
-        setPixel(centerX - x, centerY - y, color); // Octant 5
-        setPixel(centerX - y, centerY - x, color); // Octant 6
-        setPixel(centerX + y, centerY - x, color); // Octant 7
-        setPixel(centerX + x, centerY - y, color); // Octant 8
+        setPixel_BB(centerX + x, centerY + y, color); // Octant 1
+        setPixel_BB(centerX + y, centerY + x, color); // Octant 2
+        setPixel_BB(centerX - y, centerY + x, color); // Octant 3
+        setPixel_BB(centerX - x, centerY + y, color); // Octant 4
+        setPixel_BB(centerX - x, centerY - y, color); // Octant 5
+        setPixel_BB(centerX - y, centerY - x, color); // Octant 6
+        setPixel_BB(centerX + y, centerY - x, color); // Octant 7
+        setPixel_BB(centerX + x, centerY - y, color); // Octant 8
         y++;
 
         if (decisionOver2 <= 0) {

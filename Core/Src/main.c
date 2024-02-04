@@ -41,7 +41,6 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-LPTIM_HandleTypeDef hlptim1;
 
 RTC_HandleTypeDef hrtc;
 
@@ -66,14 +65,7 @@ uint32_t uptime = 0;
 	}
 }*/
 
-void HAL_RTCEx_WakeUpTimerEventCallback(RTC_HandleTypeDef *hrtc)
-{
-    // Actions to be taken every second
-	BLUE_LED_ON();
-	uptime++;
-	numToString(30, 140, uptime, "lu", 1);
-	updateDisplay(140, 188);
-}
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -83,10 +75,34 @@ static void MX_GPIO_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_USB_PCD_Init(void);
 static void MX_SPI1_Init(void);
-static void MX_LPTIM1_Init(void);
 static void MX_RTC_Init(void);
 static void MX_NVIC_Init(void);
 /* USER CODE BEGIN PFP */
+
+void HAL_RTCEx_WakeUpTimerEventCallback(RTC_HandleTypeDef *hrtc)
+{
+    // Actions to be taken every second
+	/*SystemClock_Config();
+	BLUE_LED_ON();
+	uptime++;
+	uint32_t startTime = HAL_GetTick();
+	//numToString(30, 140, uptime, "lu", 1);
+	drawString(30, 88, "Schnuffi", 1);
+	numToString(30, 40, startTime, "lu", 1);
+	updateDisplay(40, 134);
+	uint32_t stopTime = HAL_GetTick() - startTime;
+	numToString(30, 136, stopTime, "lu", 1);
+	updateDisplay(136, 185);*/
+	drawLine_H(70, 28, 100, 1);
+	drawLine_V(68, 30, 100, 1);
+	uint32_t startTime = HAL_GetTick();
+	fillSquare(70, 30, 100, 1);
+	startTime = HAL_GetTick() - startTime;
+	updateDisplay(28, 130);
+	numToString(30, 140, startTime, "lu", 1);
+	updateDisplay(140, 190);
+
+}
 
 /* USER CODE END PFP */
 
@@ -130,7 +146,6 @@ int main(void)
   MX_USART1_UART_Init();
   MX_USB_PCD_Init();
   MX_SPI1_Init();
-  MX_LPTIM1_Init();
   MX_RTC_Init();
 
   /* Initialize interrupts */
@@ -140,9 +155,9 @@ int main(void)
   initDisplayBuffer();
   clearDisplay();
 
-  uint32_t startTime = 0;
+  //uint32_t startTime = 0;
   const uint32_t lptimReset = 1024;
-  startTime = HAL_GetTick();
+  //startTime = HAL_GetTick();
   char str[12];
   uint32_t startTime1 = 0;
   char str1[12];
@@ -160,7 +175,7 @@ int main(void)
 	  GREEN_LED_ON();
 	  BLUE_LED_OFF();
 	  //HAL_PWR_EnterSLEEPMode(PWR_MAINREGULATOR_ON, PWR_STOPENTRY_WFI);
-	  HAL_PWREx_EnterSTOP2Mode(PWR_STOPENTRY_WFI);
+	  //HAL_PWREx_EnterSTOP2Mode(PWR_STOPENTRY_WFI);
 	  //HAL_PWREx_EnterSTOP0Mode(PWR_STOPENTRY_WFI);
 
 	  /*if (HAL_LPTIM_ReadCounter(&hlptim1) >= counter) {
@@ -232,9 +247,8 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_LSI1
-                              |RCC_OSCILLATORTYPE_HSE|RCC_OSCILLATORTYPE_LSE
-                              |RCC_OSCILLATORTYPE_MSI;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_HSE
+                              |RCC_OSCILLATORTYPE_LSE|RCC_OSCILLATORTYPE_MSI;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.LSEState = RCC_LSE_ON;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
@@ -242,7 +256,6 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.MSICalibrationValue = RCC_MSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.MSIClockRange = RCC_MSIRANGE_6;
-  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
@@ -300,53 +313,9 @@ void PeriphCommonClock_Config(void)
   */
 static void MX_NVIC_Init(void)
 {
-  /* LPTIM1_IRQn interrupt configuration */
-  //HAL_NVIC_SetPriority(LPTIM1_IRQn, 0, 0);
-  //HAL_NVIC_EnableIRQ(LPTIM1_IRQn);
-
-  HAL_NVIC_SetPriority(RTC_WKUP_IRQn, 0, 0);
+  /* RTC_WKUP_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(RTC_WKUP_IRQn, 1, 0);
   HAL_NVIC_EnableIRQ(RTC_WKUP_IRQn);
-}
-
-/**
-  * @brief LPTIM1 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_LPTIM1_Init(void)
-{
-
-  /* USER CODE BEGIN LPTIM1_Init 0 */
-
-  /* USER CODE END LPTIM1_Init 0 */
-
-  /* USER CODE BEGIN LPTIM1_Init 1 */
-
-  /* USER CODE END LPTIM1_Init 1 */
-  hlptim1.Instance = LPTIM1;
-  hlptim1.Init.Clock.Source = LPTIM_CLOCKSOURCE_APBCLOCK_LPOSC;
-  hlptim1.Init.Clock.Prescaler = LPTIM_PRESCALER_DIV32;
-  hlptim1.Init.Trigger.Source = LPTIM_TRIGSOURCE_SOFTWARE;
-  hlptim1.Init.OutputPolarity = LPTIM_OUTPUTPOLARITY_HIGH;
-  hlptim1.Init.UpdateMode = LPTIM_UPDATE_ENDOFPERIOD;
-  hlptim1.Init.CounterSource = LPTIM_COUNTERSOURCE_INTERNAL;
-  hlptim1.Init.Input1Source = LPTIM_INPUT1SOURCE_GPIO;
-  hlptim1.Init.Input2Source = LPTIM_INPUT2SOURCE_GPIO;
-  if (HAL_LPTIM_Init(&hlptim1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN LPTIM1_Init 2 */
-  //HAL_NVIC_SetPriority(LPTIM1_IRQn, 0, 0);
-  //HAL_NVIC_EnableIRQ(LPTIM1_IRQn);
-  //HAL_LPTIM_IRQHandler(&hlptim1);
-  /*if (HAL_LPTIM_Counter_Start_IT(&hlptim1, 1024) != HAL_OK)
-    {
-        // Starting Error
-        Error_Handler();
-    }*/
-  /* USER CODE END LPTIM1_Init 2 */
-
 }
 
 /**
