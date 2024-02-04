@@ -96,7 +96,7 @@ void HAL_RTCEx_WakeUpTimerEventCallback(RTC_HandleTypeDef *hrtc)
 	drawLine_H(70, 28, 100, 1);
 	drawLine_V(68, 30, 100, 1);
 	uint32_t startTime = HAL_GetTick();
-	fillSquare(70, 30, 100, 1);
+	fillRectangle(70, 30, 100, 100, 1);
 	startTime = HAL_GetTick() - startTime;
 	updateDisplay(28, 130);
 	numToString(30, 140, startTime, "lu", 1);

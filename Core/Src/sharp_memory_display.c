@@ -153,31 +153,6 @@ void sendToDisplay_DMA(void) {
 
 }
 
-/*void fillSquare(int start_position_x, int start_position_y, int square_size, bool color) {
-    // Loop over each row of the square
-    for (int row = start_position_y - 1; row < start_position_y - 1 + square_size; row++) {
-        // Check if row is within the display bounds
-        if (row < 0 || row >= DISPLAY_HEIGHT) continue;
-
-        // Loop over each column of the square
-        for (int col = start_position_x - 1; col < start_position_x - 1 + square_size; col++) {
-            // Check if col is within the display bounds
-            //if (col < 0 || col >= DISPLAY_WIDTH) continue;
-
-            int byteIndex = col / 8;  // Find the byte in which the pixel resides
-            int bitIndex = 7 - (col % 8);   // Find the position of the pixel within that byte
-
-            if (color) {
-				// Set the bit to draw a pixel (assuming 0 is the color for drawing)
-            	currentBuffer[row][byteIndex] &= ~(1 << bitIndex);
-			} else {
-				// Clear the bit to erase a pixel (assuming 1 is the color for erasing)
-				currentBuffer[row][byteIndex] |= (1 << bitIndex);
-			}
-        }
-    }
-}*/
-
 void fillSquare(int start_position_x, int start_position_y, int square_size, bool color) {
 	int col = start_position_x - 1;
 	int lastBytePosition = (col + square_size) >> 3; // (col + square_size) / 8
@@ -186,6 +161,7 @@ void fillSquare(int start_position_x, int start_position_y, int square_size, boo
 	int bitIndex = 7 - (col & 7); // bitIndex = 7 - (x % 8)
 	int columnsToMemset = 0;
 	uint8_t memsetColor = 0x0;
+
 	if (color == 0) {
 		memsetColor = 0xF;
 	}
@@ -195,6 +171,7 @@ void fillSquare(int start_position_x, int start_position_y, int square_size, boo
 	} else {
 		columnsToMemset = lastBytePosition - byteIndex - 1;
 	}
+
     // Loop over each row of the square
     for (int row = start_position_y - 1; row < start_position_y + square_size; row++) {
         // Loop over each column of the square
@@ -205,7 +182,6 @@ void fillSquare(int start_position_x, int start_position_y, int square_size, boo
             if (bitIndex == 7 && byteIndex != lastBytePosition) {
             	memset(&currentBuffer[row][byteIndex], memsetColor, columnsToMemset);
             	col = col - 1 + (columnsToMemset * 8);
-            	//columnsToMemset = 0;
             	continue;
             }
             // Calculate the byte offset within the buffer
@@ -220,36 +196,111 @@ void fillSquare(int start_position_x, int start_position_y, int square_size, boo
 }
 
 void fillRectangle(int start_position_x, int start_position_y, int length_x, int length_y, bool color) {
-	// Loop over each row of the square
-	for (int row = start_position_y - 1; row < start_position_y - 1 + length_y; row++) {
-		// Check if row is within the display bounds
-		if (row < 0 || row >= DISPLAY_HEIGHT) continue;
+	int col = start_position_x - 1;
+	int lastBytePosition = (col + length_x) >> 3; // (col + square_size) / 8
+	int lastBitPosition = 7 - ((col + length_x) & 7); // 7 - ((col + square_size) % 8
+	int byteIndex = col >> 3; // byteIndex = x / 8
+	int bitIndex = 7 - (col & 7); // bitIndex = 7 - (x % 8)
+	int columnsToMemset = 0;
+	uint8_t memsetColor = 0x0;
+
+	if (color == 0) {
+		memsetColor = 0xF;
+	}
+
+	if (lastBitPosition == 7) {
+		columnsToMemset = lastBytePosition - byteIndex;
+	} else {
+		columnsToMemset = lastBytePosition - byteIndex - 1;
+	}
+
+	for (int row = start_position_y - 1; row < start_position_y + length_y; row++) {
 
 		// Loop over each column of the square
-		for (int col = start_position_x - 1; col < start_position_x - 1 + length_x; col++) {
-			// Check if col is within the display bounds
-			if (col < 0 || col >= DISPLAY_WIDTH) continue;
+		for (col = start_position_x - 1; col < start_position_x + length_x; col++) {
+			byteIndex = col >> 3; // byteIndex = x / 8
+			bitIndex = 7 - (col & 7); // bitIndex = 7 - (x % 8)
 
-			int byteIndex = col / 8;  // Find the byte in which the pixel resides
-			int bitIndex = 7 - (col % 8);   // Find the position of the pixel within that byte
-
-			if (color) {
-				// Set the bit to draw a pixel (assuming 0 is the color for drawing)
-				currentBuffer[row][byteIndex] &= ~(1 << bitIndex);
-
-			} else {
-				// Clear the bit to erase a pixel (assuming 1 is the color for erasing)
-				currentBuffer[row][byteIndex] |= (1 << bitIndex);
+			if (bitIndex == 7 && byteIndex != lastBytePosition) {
+				memset(&currentBuffer[row][byteIndex], memsetColor, columnsToMemset);
+				col = col - 1 + (columnsToMemset * 8);
+				continue;
 			}
+
+			// Calculate the byte offset within the buffer
+			uint32_t byte_offset = (uint32_t)&currentBuffer[row][byteIndex] - SRAM_BASE;
+
+			// Calculate the bit_word_offset and bit_band_alias_address
+			uint32_t bit_word_offset = (byte_offset << 5) + (bitIndex << 2); // bit_word_offset = (byte_offset) * 32 + (bitIndex * 4)
+			uint32_t bit_band_alias_address = SRAM_BB_BASE + bit_word_offset;
+			*(volatile uint32_t *)bit_band_alias_address = (color ? 0 : 1);
 		}
 	}
 }
 
-void drawLine_H(int start_position_x, int start_position_y, int length, bool color) {
-	for (int col = start_position_x - 1; col < start_position_x + length; col++) {
+/*void fillRectangle(int start_position_x, int start_position_y, int length_x, int length_y, bool color) {
+	// Loop over each row of the square
+	for (int row = start_position_y - 1; row < start_position_y + length_y; row++) {
 
-		int byteIndex = col / 8;
-		int bitIndex = 7 - (col % 8);
+		// Loop over each column of the square
+		for (int col = start_position_x - 1; col < start_position_x + length_x; col++) {
+			int byteIndex = col >> 3; // byteIndex = x / 8
+			int bitIndex = 7 - (col & 7); // bitIndex = 7 - (x % 8)
+
+			// Calculate the byte offset within the buffer
+			uint32_t byte_offset = (uint32_t)&currentBuffer[row][byteIndex] - SRAM_BASE;
+
+			// Calculate the bit_word_offset and bit_band_alias_address
+			uint32_t bit_word_offset = (byte_offset << 5) + (bitIndex << 2); // bit_word_offset = (byte_offset) * 32 + (bitIndex * 4)
+			uint32_t bit_band_alias_address = SRAM_BB_BASE + bit_word_offset;
+			*(volatile uint32_t *)bit_band_alias_address = (color ? 0 : 1);
+		}
+	}
+}*/
+
+void drawLine_H(int start_position_x, int start_position_y, int length, bool color) {
+	int col = start_position_x - 1;
+	uint8_t memsetColor = 0x0;
+	int columnsToMemset = 0;
+	int lastBytePosition = (col + length) >> 3; // (col + square_size) / 8
+	int lastBitPosition = 7 - ((col + length) & 7); // 7 - ((col + square_size) % 8
+	int byteIndex = col >> 3; // byteIndex = x / 8
+	int bitIndex = 7 - (col & 7); // bitIndex = 7 - (x % 8)
+
+	if (color == 0) {
+		memsetColor = 0xF;
+	}
+
+	if (lastBitPosition == 7) {
+		columnsToMemset = lastBytePosition - byteIndex;
+	} else {
+		columnsToMemset = lastBytePosition - byteIndex - 1;
+	}
+
+	for (col = start_position_x - 1; col < start_position_x + length; col++) {
+		byteIndex = col >> 3; // byteIndex = x / 8
+		bitIndex = 7 - (col & 7); // bitIndex = 7 - (x % 8)
+
+		if (bitIndex == 7 && byteIndex != lastBytePosition) {
+			memset(&currentBuffer[start_position_y - 1][byteIndex], memsetColor, columnsToMemset);
+			col = col - 1 + (columnsToMemset * 8);
+			continue;
+		}
+		// Calculate the byte offset within the buffer
+		uint32_t byte_offset = (uint32_t)&currentBuffer[start_position_y - 1][byteIndex] - SRAM_BASE;
+
+		// Calculate the bit_word_offset and bit_band_alias_address
+		uint32_t bit_word_offset = (byte_offset << 5) + (bitIndex << 2); // bit_word_offset = (byte_offset) * 32 + (bitIndex * 4)
+		uint32_t bit_band_alias_address = SRAM_BB_BASE + bit_word_offset;
+		*(volatile uint32_t *)bit_band_alias_address = (color ? 0 : 1);
+	}
+}
+
+// Faster for a line < 16 px
+void drawShortLine_H(int start_position_x, int start_position_y, int length, bool color) {
+	for (int col = start_position_x - 1; col < start_position_x + length; col++) {
+		int byteIndex = col >> 3; // byteIndex = x / 8
+		int bitIndex = 7 - (col & 7); // bitIndex = 7 - (x % 8)
 
 		if (color) {
 			// Set the bit to draw a pixel (assuming 0 is the color for drawing)
@@ -264,19 +315,16 @@ void drawLine_H(int start_position_x, int start_position_y, int length, bool col
 
 void drawLine_V(int start_position_x, int start_position_y, int length, bool color) {
 	for (int row = start_position_y - 1; row < start_position_y + length; row++) {
-		if (row < 0 || row >= DISPLAY_HEIGHT) continue;
+		int byteIndex = (start_position_x - 1) >> 3; // byteIndex = x / 8
+		int bitIndex = 7 - ((start_position_x - 1) & 7); // bitIndex = 7 - (x % 8)
 
-		int byteIndex = (start_position_x - 1) / 8;
-		int bitIndex = 7 - ((start_position_x - 1) % 8);
+		// Calculate the byte offset within the buffer
+		uint32_t byte_offset = (uint32_t)&currentBuffer[row][byteIndex] - SRAM_BASE;
 
-		if (color) {
-			// Set the bit to draw a pixel (assuming 0 is the color for drawing)
-			currentBuffer[row][byteIndex] &= ~(1 << bitIndex);
-
-		} else {
-			// Clear the bit to erase a pixel (assuming 1 is the color for erasing)
-			currentBuffer[row][byteIndex] |= (1 << bitIndex);
-		}
+		// Calculate the bit_word_offset and bit_band_alias_address
+		uint32_t bit_word_offset = (byte_offset << 5) + (bitIndex << 2); // bit_word_offset = (byte_offset) * 32 + (bitIndex * 4)
+		uint32_t bit_band_alias_address = SRAM_BB_BASE + bit_word_offset;
+		*(volatile uint32_t *)bit_band_alias_address = (color ? 0 : 1);
 	}
 }
 

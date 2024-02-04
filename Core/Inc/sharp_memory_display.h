@@ -62,6 +62,7 @@ void fillSquare(int, int, int, bool);
 void fillSquare1(int start_position_x, int start_position_y, int square_size, bool color);
 void fillRectangle(int, int, int, int, bool);
 void drawLine_H(int, int, int, bool);
+void drawShortLine_H(int start_position_x, int start_position_y, int length, bool color);
 void drawLine_V(int, int, int, bool);
 void drawLine(int, int, int, int, bool);
 void setPixel(int, int, bool);
