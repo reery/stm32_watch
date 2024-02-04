@@ -75,59 +75,61 @@ void HAL_MspInit(void)
 }
 
 /**
-* @brief LPTIM MSP Initialization
+* @brief RTC MSP Initialization
 * This function configures the hardware resources used in this example
-* @param hlptim: LPTIM handle pointer
+* @param hrtc: RTC handle pointer
 * @retval None
 */
-void HAL_LPTIM_MspInit(LPTIM_HandleTypeDef* hlptim)
+void HAL_RTC_MspInit(RTC_HandleTypeDef* hrtc)
 {
   RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
-  if(hlptim->Instance==LPTIM1)
+  if(hrtc->Instance==RTC)
   {
-  /* USER CODE BEGIN LPTIM1_MspInit 0 */
+  /* USER CODE BEGIN RTC_MspInit 0 */
 
-  /* USER CODE END LPTIM1_MspInit 0 */
+  /* USER CODE END RTC_MspInit 0 */
 
   /** Initializes the peripherals clock
   */
-    PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_LPTIM1;
-    PeriphClkInitStruct.Lptim1ClockSelection = RCC_LPTIM1CLKSOURCE_LSI;
+    PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_RTC;
+    PeriphClkInitStruct.RTCClockSelection = RCC_RTCCLKSOURCE_LSE;
     if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
     {
       Error_Handler();
     }
 
     /* Peripheral clock enable */
-    __HAL_RCC_LPTIM1_CLK_ENABLE();
-  /* USER CODE BEGIN LPTIM1_MspInit 1 */
+    __HAL_RCC_RTC_ENABLE();
+    __HAL_RCC_RTCAPB_CLK_ENABLE();
+  /* USER CODE BEGIN RTC_MspInit 1 */
 
-  /* USER CODE END LPTIM1_MspInit 1 */
+  /* USER CODE END RTC_MspInit 1 */
   }
 
 }
 
 /**
-* @brief LPTIM MSP De-Initialization
+* @brief RTC MSP De-Initialization
 * This function freeze the hardware resources used in this example
-* @param hlptim: LPTIM handle pointer
+* @param hrtc: RTC handle pointer
 * @retval None
 */
-void HAL_LPTIM_MspDeInit(LPTIM_HandleTypeDef* hlptim)
+void HAL_RTC_MspDeInit(RTC_HandleTypeDef* hrtc)
 {
-  if(hlptim->Instance==LPTIM1)
+  if(hrtc->Instance==RTC)
   {
-  /* USER CODE BEGIN LPTIM1_MspDeInit 0 */
+  /* USER CODE BEGIN RTC_MspDeInit 0 */
 
-  /* USER CODE END LPTIM1_MspDeInit 0 */
+  /* USER CODE END RTC_MspDeInit 0 */
     /* Peripheral clock disable */
-    __HAL_RCC_LPTIM1_CLK_DISABLE();
+    __HAL_RCC_RTC_DISABLE();
+    __HAL_RCC_RTCAPB_CLK_DISABLE();
 
-    /* LPTIM1 interrupt DeInit */
-    HAL_NVIC_DisableIRQ(LPTIM1_IRQn);
-  /* USER CODE BEGIN LPTIM1_MspDeInit 1 */
+    /* RTC interrupt DeInit */
+    HAL_NVIC_DisableIRQ(RTC_WKUP_IRQn);
+  /* USER CODE BEGIN RTC_MspDeInit 1 */
 
-  /* USER CODE END LPTIM1_MspDeInit 1 */
+  /* USER CODE END RTC_MspDeInit 1 */
   }
 
 }

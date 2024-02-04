@@ -52,13 +52,14 @@ void drawSomething(void);
 void invertDisplayBuffer(void);
 void initDisplayBuffer(void);
 void initCurrentBuffer(void);
-void resetCurrentBuffer(uint8_t y_start, uint8_t y_end);
+void resetCurrentBufferLines(uint8_t y_start, uint8_t y_end);
 unsigned int sendToDisplay(void);
 unsigned int updateDisplay(uint8_t y_start, uint8_t y_end);
 void sendToDisplay_DMA(void);
 
 // GFX functions - will probably get their own header file
 void fillSquare(int, int, int, bool);
+void fillSquare1(int start_position_x, int start_position_y, int square_size, bool color);
 void fillRectangle(int, int, int, int, bool);
 void drawLine_H(int, int, int, bool);
 void drawLine_V(int, int, int, bool);
