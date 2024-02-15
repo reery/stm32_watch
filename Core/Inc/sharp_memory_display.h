@@ -40,6 +40,10 @@
 #define RED_LED_ON()	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET)
 #define RED_LED_OFF()	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET)
 
+// Simple functions
+#define min(a, b) ((a) < (b) ? (a) : (b))
+#define max(a, b) ((a) > (b) ? (a) : (b))
+
 // Needed for bit-banding feature in drawChar function
 #define SRAM_BB_BASE 0x22000000
 
@@ -58,9 +62,9 @@ unsigned int updateDisplay(uint8_t y_start, uint8_t y_end);
 void sendToDisplay_DMA(void);
 
 // GFX functions - will probably get their own header file
-void fillSquare(int, int, int, bool);
-void fillSquare1(int start_position_x, int start_position_y, int square_size, bool color);
+void fillSquare(int start_position_x, int start_position_y, int square_size, bool color);
 void fillRectangle(int, int, int, int, bool);
+void drawRectangle(int start_position_x, int start_position_y, int length_x, int length_y, int thickness, bool color);
 void drawLine_H(int, int, int, bool);
 void drawShortLine_H(int start_position_x, int start_position_y, int length, bool color);
 void drawLine_V(int, int, int, bool);
@@ -72,6 +76,10 @@ void fillCircle(int, int, int, bool);
 void drawChar(int x, int y, char c, bool color);
 void drawString(int x, int y, const char* str, bool color);
 void numToString(int x, int y, int number, char *format, bool color);
+void drawThickLine(int x0, int y0, int x1, int y1, int thickness, bool color);
+void drawFilledPolygon(int x1, int y1, int x2, int y2, int x3, int y3, int x4, int y4, bool color);
+void drawPolygon(int x1, int y1, int x2, int y2, int x3, int y3, int x4, int y4, bool color);
+void drawThickCircle(int centerX, int centerY, int radius, int thickness, bool color);
 
 // Debug, test and performance functions
 

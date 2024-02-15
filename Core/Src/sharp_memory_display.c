@@ -10,8 +10,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-#include "Fonts/k2d_bold_48.h"
 #include <stdio.h>
+#include "watch_fonts.h"
+#include <math.h>
 
 extern SPI_HandleTypeDef hspi1;
 uint8_t clear_command = 0x20;  // M2 clear flag
@@ -23,6 +24,8 @@ uint8_t dummy_8bit = 0x00;
 uint8_t backBuffer[DISPLAY_HEIGHT][DISPLAY_WIDTH / 8] __attribute__((aligned(4)));
 uint8_t (*currentBuffer)[DISPLAY_WIDTH / 8] = backBuffer;
 uint8_t sendToDisplayBuffer[TOTAL_DATA_SIZE];
+Font* currentFont = NULL;
+
 
 void clearDisplay(void) {
 	SCS_HIGH();
@@ -160,11 +163,7 @@ void fillSquare(int start_position_x, int start_position_y, int square_size, boo
 	int byteIndex = col >> 3; // byteIndex = x / 8
 	int bitIndex = 7 - (col & 7); // bitIndex = 7 - (x % 8)
 	int columnsToMemset = 0;
-	uint8_t memsetColor = 0x0;
-
-	if (color == 0) {
-		memsetColor = 0xF;
-	}
+	uint8_t memsetColor = color ? 0x00 : 0xFF;
 
 	if (lastBitPosition == 7) {
 		columnsToMemset = lastBytePosition - byteIndex;
@@ -202,11 +201,7 @@ void fillRectangle(int start_position_x, int start_position_y, int length_x, int
 	int byteIndex = col >> 3; // byteIndex = x / 8
 	int bitIndex = 7 - (col & 7); // bitIndex = 7 - (x % 8)
 	int columnsToMemset = 0;
-	uint8_t memsetColor = 0x0;
-
-	if (color == 0) {
-		memsetColor = 0xF;
-	}
+	uint8_t memsetColor = color ? 0x00 : 0xFF;
 
 	if (lastBitPosition == 7) {
 		columnsToMemset = lastBytePosition - byteIndex;
@@ -238,40 +233,26 @@ void fillRectangle(int start_position_x, int start_position_y, int length_x, int
 	}
 }
 
-/*void fillRectangle(int start_position_x, int start_position_y, int length_x, int length_y, bool color) {
-	// Loop over each row of the square
-	for (int row = start_position_y - 1; row < start_position_y + length_y; row++) {
-
-		// Loop over each column of the square
-		for (int col = start_position_x - 1; col < start_position_x + length_x; col++) {
-			int byteIndex = col >> 3; // byteIndex = x / 8
-			int bitIndex = 7 - (col & 7); // bitIndex = 7 - (x % 8)
-
-			// Calculate the byte offset within the buffer
-			uint32_t byte_offset = (uint32_t)&currentBuffer[row][byteIndex] - SRAM_BASE;
-
-			// Calculate the bit_word_offset and bit_band_alias_address
-			uint32_t bit_word_offset = (byte_offset << 5) + (bitIndex << 2); // bit_word_offset = (byte_offset) * 32 + (bitIndex * 4)
-			uint32_t bit_band_alias_address = SRAM_BB_BASE + bit_word_offset;
-			*(volatile uint32_t *)bit_band_alias_address = (color ? 0 : 1);
-		}
+// Add thickness calculation to loop
+void drawRectangle(int start_position_x, int start_position_y, int length_x, int length_y, int thickness, bool color) {
+	for (int i = 0; i < thickness; i++) {
+		drawLine_H(start_position_x + i, start_position_y + i, length_x - (i * 2), color); // Top H line
+		drawLine_H(start_position_x + i, start_position_y + length_y - i, length_x - (i * 2), color); // Bottom H line
+		drawLine_V(start_position_x + i, start_position_y + 1 + i, length_y - 1 - (i * 2), color); // Left V line
+		drawLine_V(start_position_x + length_x - i, start_position_y + 1 + i, length_y - 1 - (i * 2), color); // Right V line
 	}
-}*/
+}
 
 void drawLine_H(int start_position_x, int start_position_y, int length, bool color) {
 	int col = start_position_x - 1;
-	uint8_t memsetColor = 0x0;
-	int columnsToMemset = 0;
-	int lastBytePosition = (col + length) >> 3; // (col + square_size) / 8
-	int lastBitPosition = 7 - ((col + length) & 7); // 7 - ((col + square_size) % 8
+	uint8_t memsetColor = color ? 0x00 : 0xFF;
+	int lastBytePosition = (col + length) >> 3; // (col + length) / 8
+	//int lastBitPosition = 7 - ((col + length) & 7); // 7 - ((col + length) % 8
 	int byteIndex = col >> 3; // byteIndex = x / 8
 	int bitIndex = 7 - (col & 7); // bitIndex = 7 - (x % 8)
+	int columnsToMemset = 0;
 
-	if (color == 0) {
-		memsetColor = 0xF;
-	}
-
-	if (lastBitPosition == 7) {
+	if (bitIndex == 7) {
 		columnsToMemset = lastBytePosition - byteIndex;
 	} else {
 		columnsToMemset = lastBytePosition - byteIndex - 1;
@@ -281,7 +262,7 @@ void drawLine_H(int start_position_x, int start_position_y, int length, bool col
 		byteIndex = col >> 3; // byteIndex = x / 8
 		bitIndex = 7 - (col & 7); // bitIndex = 7 - (x % 8)
 
-		if (bitIndex == 7 && byteIndex != lastBytePosition) {
+		if (bitIndex == 7 && byteIndex < lastBytePosition) {
 			memset(&currentBuffer[start_position_y - 1][byteIndex], memsetColor, columnsToMemset);
 			col = col - 1 + (columnsToMemset * 8);
 			continue;
@@ -371,22 +352,24 @@ void setPixel_BB(int x, int y, bool color) {
 
 void drawChar(int x, int y, char c, bool color) {
 	// Get the index of the character in the font arrays
-	int charIndex = c - 33; // Assuming '!' (char 33) is the first character in your font
+	//int charIndex = c - 33; // Assuming '!' (char 33) is the first character in your font
+	int charIndex = c - currentFont->char_index;
 
 	// Get the character width and bitmap address
-	int width = char_width[charIndex];
-	const char* bitmap = char_addr[charIndex];
+	//int width = char_width[charIndex];
+	int width = currentFont->char_width[charIndex];
+	//const char* bitmap = char_addr[charIndex];
+	const char* bitmap = currentFont->char_addr[charIndex];
 
 	// Iterate over each vertical slice (column) in the character's bitmap
 	for (int col = 0; col < width; col++) {
 		int displayX = x + col;  // X position is based on the column (width)
-		int bitmapColOffset = col; // Pre-calculate column offset in the bitmap
 
 		int prevRowDivisionResult = -1;
 		int prevRowDivisionResultTimesWidth = -1;
 
 		// Iterate over each row in the character's bitmap
-		for (int row = 0; row < 48; row++) { // Assuming 48 pixels in height
+		for (int row = 0; row < currentFont->font_height; row++) {
 			int displayY = y + row;  // Y position is based on the row (height)
 
 			// Optimize division and multiplication
@@ -397,7 +380,7 @@ void drawChar(int x, int y, char c, bool color) {
 			}
 
 			// Calculate the position in the bitmap array and the bit index
-			int bitmapIndex = bitmapColOffset + prevRowDivisionResultTimesWidth;
+			int bitmapIndex = col + prevRowDivisionResultTimesWidth;
 			int bitIndex = row & 7;  // Bit index within the byte, assuming LSB to MSB ordering
 
 			// Check if the pixel should be drawn (based on the bitmap data)
@@ -408,11 +391,11 @@ void drawChar(int x, int y, char c, bool color) {
 	}
 }
 
-
 void drawString(int x, int y, const char* str, bool color) {
     while (*str) {
         drawChar(x, y, *str, color);
-        x += char_width[*str - 33] + 1; // Move x to the next character position
+        //x += char_width[*str - 33] + 1; // Move x to the next character position
+        x += currentFont->char_width[*str - currentFont->char_index] + 1;
         str++; // Next character
     }
 }
@@ -425,19 +408,95 @@ void numToString(int x, int y, int number, char *format, bool color) {
 	sprintf(str, finalFormat, number);
 	while (*string_pointer) {
         drawChar(x, y, *string_pointer, color);
-        x += char_width[*string_pointer - 33] + 1; // Move x to the next character position
+        //x += char_width[*string_pointer - 33] + 1; // Move x to the next character position
+        x += currentFont->char_width[*str - 33] + 1;
         string_pointer++; // Next character
     }
 }
 
-// Slow, needs optimization
+void drawThickLine(int x0, int y0, int x1, int y1, int thickness, bool color) {
+    int dx = x1 - x0;
+    int dy = y1 - y0;
+    int len = round(sqrt(dx * dx + dy * dy));
+    int ux = (thickness * dy) >> len; // equivalent to thickness * dy / len
+    int uy = (thickness * dx) >> len; // equivalent to thickness * dx / len
+
+    int x2 = x0 - ux;
+    int y2 = y0 + uy;
+    int x3 = x1 - ux;
+    int y3 = y1 + uy;
+    int x4 = x1 + ux;
+    int y4 = y1 - uy;
+    int x5 = x0 + ux;
+    int y5 = y0 - uy;
+
+    drawFilledPolygon(x2, y2, x3, y3, x4, y4, x5, y5, color);
+}
+
+void drawFilledPolygon(int x1, int y1, int x2, int y2, int x3, int y3, int x4, int y4, bool color) {
+    // Sort the vertices by y-coordinate
+    int yMin = min(min(y1, y2), min(y3, y4));
+    int yMax = max(max(y1, y2), max(y3, y4));
+
+    for (int y = yMin; y <= yMax; y++) {
+        // Find the intersections of the scanline with all sides of the polygon
+        int xMin = INT32_MAX, xMax = INT32_MIN;
+        if (y >= min(y1, y2) && y <= max(y1, y2))
+            xMin = min(xMin, x1 + (int)((float)(y - y1) * (x2 - x1) / (y2 - y1)));
+        if (y >= min(y3, y4) && y <= max(y3, y4))
+            xMin = min(xMin, x3 + (int)((float)(y - y3) * (x4 - x3) / (y4 - y3)));
+        if (y >= min(y1, y4) && y <= max(y1, y4))
+            xMax = max(xMax, x1 + (int)((float)(y - y1) * (x4 - x1) / (y4 - y1)));
+        if (y >= min(y2, y3) && y <= max(y2, y3))
+            xMax = max(xMax, x2 + (int)((float)(y - y2) * (x3 - x2) / (y3 - y2)));
+
+        // Draw a horizontal line from xMin to xMax
+        drawLine_H(xMin, y, xMax - xMin, color);
+    }
+}
+
+void drawPolygon(int x1, int y1, int x2, int y2, int x3, int y3, int x4, int y4, bool color) {
+    // Array to hold the vertices
+    int vertices[4][2] = {{x1, y1}, {x2, y2}, {x3, y3}, {x4, y4}};
+
+    // Sort the vertices by y-coordinate, then by x-coordinate
+    for (int i = 0; i < 4; i++) {
+        for (int j = i + 1; j < 4; j++) {
+            if (vertices[j][1] < vertices[i][1] || (vertices[j][1] == vertices[i][1] && vertices[j][0] < vertices[i][0])) {
+                // Swap vertices[i] and vertices[j]
+                int tempX = vertices[i][0];
+                int tempY = vertices[i][1];
+                vertices[i][0] = vertices[j][0];
+                vertices[i][1] = vertices[j][1];
+                vertices[j][0] = tempX;
+                vertices[j][1] = tempY;
+            }
+        }
+    }
+
+    // Draw the lines - point to point line is not always closed
+    drawLine(vertices[0][0], vertices[0][1], vertices[1][0], vertices[1][1], color); // Line from v1 to v2
+    drawLine(vertices[0][0], vertices[0][1] + 1, vertices[2][0], vertices[2][1], color); // Line from v1 to v3
+    drawLine(vertices[1][0], vertices[1][1], vertices[3][0], vertices[3][1], color); // Line from v2 to v4
+    drawLine(vertices[2][0] + 1, vertices[2][1], vertices[3][0] - 1, vertices[3][1], color); // Line from v3 to v4
+}
+
+//32 bit optimized, 3 ms instead of 20 ms (6.5x speedup)
 void invertDisplayBuffer(void) {
+    uint32_t* buffer32 = (uint32_t*)currentBuffer;
+    for (int i = 0; i < (DISPLAY_HEIGHT * DISPLAY_WIDTH / 8) / 4; i++) {
+        buffer32[i] = ~buffer32[i];
+    }
+}
+
+// Slow, needs optimization
+/*void invertDisplayBuffer(void) {
 	for (int row = 0; row < DISPLAY_HEIGHT; row++) {
 	    for (int col = 0; col < DISPLAY_WIDTH / 8; col++) {
 	    	currentBuffer[row][col] = ~currentBuffer[row][col];
 	    }
 	}
-}
+}*/
 
 void initDisplayBuffer(void) {
 	//memset(frontBuffer, 0xFF, DISPLAY_HEIGHT * (DISPLAY_WIDTH / 8));
@@ -487,6 +546,33 @@ void drawCircle(int centerX, int centerY, int radius, bool color) {
         } else {
             x--;
             decisionOver2 += 2 * (y - x) + 1;   // Change for y -> y+1, x -> x-1
+        }
+    }
+}
+
+void drawThickCircle(int centerX, int centerY, int radius, int thickness, bool color) {
+    for (int r = radius; r < radius + thickness; r++) {
+        int x = r;
+        int y = 0;
+        int decisionOver2 = 1 - x;   // Decision criterion divided by 2 evaluated at x=r, y=0
+
+        while (y <= x) {
+            setPixel_BB(centerX + x, centerY + y, color); // Octant 1
+            setPixel_BB(centerX + y, centerY + x, color); // Octant 2
+            setPixel_BB(centerX - y, centerY + x, color); // Octant 3
+            setPixel_BB(centerX - x, centerY + y, color); // Octant 4
+            setPixel_BB(centerX - x, centerY - y, color); // Octant 5
+            setPixel_BB(centerX - y, centerY - x, color); // Octant 6
+            setPixel_BB(centerX + y, centerY - x, color); // Octant 7
+            setPixel_BB(centerX + x, centerY - y, color); // Octant 8
+            y++;
+
+            if (decisionOver2 <= 0) {
+                decisionOver2 += 2 * y + 1;   // Change in decision criterion for y -> y+1
+            } else {
+                x--;
+                decisionOver2 += 2 * (y - x) + 1;   // Change for y -> y+1, x -> x-1
+            }
         }
     }
 }

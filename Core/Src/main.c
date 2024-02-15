@@ -23,6 +23,7 @@
 /* USER CODE BEGIN Includes */
 #include "sharp_memory_display.h"
 #include <stdio.h>
+#include "watch_fonts.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -93,15 +94,55 @@ void HAL_RTCEx_WakeUpTimerEventCallback(RTC_HandleTypeDef *hrtc)
 	uint32_t stopTime = HAL_GetTick() - startTime;
 	numToString(30, 136, stopTime, "lu", 1);
 	updateDisplay(136, 185);*/
-	drawLine_H(70, 28, 100, 1);
+
+	setFont(&k2d_extrabold_64);
+	//drawPolygon(50, 50, 120, 30, 200, 50, 100, 80, 1);
+	//drawThickLine(50, 50, 120, 120, 10, 1);
+	drawRectangle(80, 50, 100, 50, 10, 1);
+	updateDisplay(28, 130);
+
+	/*uint32_t startTime = HAL_GetTick();
+	drawLine_H(106, 50, 64, 1);
+	drawLine_H(105, 52, 65, 1); // bad
+	drawLine_H(104, 54, 66, 1);
+	drawLine_H(103, 56, 67, 1);
+	drawLine_H(102, 58, 68, 1);
+	drawLine_H(101, 60, 69, 1);
+	drawLine_H(100, 62, 70, 1);
+	drawLine_H(99, 64, 71, 1);
+	drawLine_H(98, 66, 72, 1);
+	drawLine_H(97, 68, 73, 1); // bad
+	drawLine_H(96, 70, 74, 1);
+	startTime = HAL_GetTick() - startTime;
+	setFont(&k2d_bold_48);
+	numToString(96, 80, startTime, "lu", 1);
+
+	uint32_t startTime1 = HAL_GetTick();
+	drawShortLine_H(96, 28, 74, 1);
+	drawShortLine_H(97, 30, 73, 1); // bad
+	drawShortLine_H(98, 32, 72, 1);
+	drawShortLine_H(99, 34, 71, 1);
+	drawShortLine_H(100, 36, 70, 1);
+	drawShortLine_H(101, 38, 69, 1);
+	drawShortLine_H(102, 40, 68, 1);
+	drawShortLine_H(103, 42, 67, 1);
+	drawShortLine_H(104, 44, 66, 1);
+	drawShortLine_H(105, 46, 65, 1); // bad
+	drawShortLine_H(106, 48, 64, 1);
+	startTime1 = HAL_GetTick() - startTime1;
+	numToString(140, 80, startTime1, "lu", 1);
+	updateDisplay(28, 130);*/
+
+	/*drawLine_H(70, 28, 100, 1);
 	drawLine_V(68, 30, 100, 1);
 	uint32_t startTime = HAL_GetTick();
 	fillRectangle(70, 30, 100, 100, 1);
 	startTime = HAL_GetTick() - startTime;
-	updateDisplay(28, 130);
+	//updateDisplay(28, 130);
 	numToString(30, 140, startTime, "lu", 1);
-	updateDisplay(140, 190);
-
+	//updateDisplay(140, 190);
+	invertDisplayBuffer();
+	sendToDisplay();*/
 }
 
 /* USER CODE END PFP */
@@ -156,7 +197,6 @@ int main(void)
   clearDisplay();
 
   //uint32_t startTime = 0;
-  const uint32_t lptimReset = 1024;
   //startTime = HAL_GetTick();
   char str[12];
   uint32_t startTime1 = 0;
@@ -268,7 +308,7 @@ void SystemClock_Config(void)
                               |RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSE;
-  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV2;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
   RCC_ClkInitStruct.AHBCLK2Divider = RCC_SYSCLK_DIV1;
