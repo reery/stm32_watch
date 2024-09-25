@@ -18,7 +18,7 @@ extern SPI_HandleTypeDef hspi1;
 uint8_t clear_command = 0x20;  // M2 clear flag
 uint8_t write_mode = 0x80; // M0 write mode command
 uint8_t vcom_bit = 0x40;
-uint8_t dummy_16bit = 0;
+uint16_t dummy_16bit = 0;
 uint8_t dummy_8bit = 0x00;
 //uint8_t frontBuffer[DISPLAY_HEIGHT][DISPLAY_WIDTH / 8];
 uint8_t backBuffer[DISPLAY_HEIGHT][DISPLAY_WIDTH / 8] __attribute__((aligned(4)));
@@ -156,16 +156,17 @@ void sendToDisplay_DMA(void) {
 
 }
 
+// Compare performance between this and to fill a square with the function of fillRectangle()
 void fillSquare(int start_position_x, int start_position_y, int square_size, bool color) {
 	int col = start_position_x - 1;
 	int lastBytePosition = (col + square_size) >> 3; // (col + square_size) / 8
-	int lastBitPosition = 7 - ((col + square_size) & 7); // 7 - ((col + square_size) % 8
+	//int lastBitPosition = 7 - ((col + square_size) & 7); // 7 - ((col + square_size) % 8
 	int byteIndex = col >> 3; // byteIndex = x / 8
 	int bitIndex = 7 - (col & 7); // bitIndex = 7 - (x % 8)
 	int columnsToMemset = 0;
 	uint8_t memsetColor = color ? 0x00 : 0xFF;
 
-	if (lastBitPosition == 7) {
+	if (bitIndex == 7) {
 		columnsToMemset = lastBytePosition - byteIndex;
 	} else {
 		columnsToMemset = lastBytePosition - byteIndex - 1;
@@ -178,7 +179,7 @@ void fillSquare(int start_position_x, int start_position_y, int square_size, boo
         	byteIndex = col >> 3; // byteIndex = x / 8
         	bitIndex = 7 - (col & 7); // bitIndex = 7 - (x % 8)
 
-            if (bitIndex == 7 && byteIndex != lastBytePosition) {
+            if (bitIndex == 7 && byteIndex < lastBytePosition) {
             	memset(&currentBuffer[row][byteIndex], memsetColor, columnsToMemset);
             	col = col - 1 + (columnsToMemset * 8);
             	continue;
@@ -197,13 +198,13 @@ void fillSquare(int start_position_x, int start_position_y, int square_size, boo
 void fillRectangle(int start_position_x, int start_position_y, int length_x, int length_y, bool color) {
 	int col = start_position_x - 1;
 	int lastBytePosition = (col + length_x) >> 3; // (col + square_size) / 8
-	int lastBitPosition = 7 - ((col + length_x) & 7); // 7 - ((col + square_size) % 8
+	//int lastBitPosition = 7 - ((col + length_x) & 7); // 7 - ((col + square_size) % 8
 	int byteIndex = col >> 3; // byteIndex = x / 8
 	int bitIndex = 7 - (col & 7); // bitIndex = 7 - (x % 8)
 	int columnsToMemset = 0;
 	uint8_t memsetColor = color ? 0x00 : 0xFF;
 
-	if (lastBitPosition == 7) {
+	if (bitIndex == 7) {
 		columnsToMemset = lastBytePosition - byteIndex;
 	} else {
 		columnsToMemset = lastBytePosition - byteIndex - 1;
@@ -216,7 +217,7 @@ void fillRectangle(int start_position_x, int start_position_y, int length_x, int
 			byteIndex = col >> 3; // byteIndex = x / 8
 			bitIndex = 7 - (col & 7); // bitIndex = 7 - (x % 8)
 
-			if (bitIndex == 7 && byteIndex != lastBytePosition) {
+			if (bitIndex == 7 && byteIndex < lastBytePosition) {
 				memset(&currentBuffer[row][byteIndex], memsetColor, columnsToMemset);
 				col = col - 1 + (columnsToMemset * 8);
 				continue;
@@ -323,8 +324,9 @@ void drawLine(int x0, int y0, int x1, int y1, bool color) {
 }
 
 void setPixel(int x, int y, bool color) {
-	int byteIndex = (x) / 8;
-	int bitIndex = 7 - ((x) % 8);
+	int byteIndex = x >> 3; // byteIndex = x / 8
+	int bitIndex = 7 - (x & 7); // bitIndex = 7 - (x % 8)
+
 	if (color) {
 		// Set the bit to draw a pixel (assuming 0 is the color for drawing)
 		currentBuffer[y][byteIndex] &= ~(1 << bitIndex);
@@ -510,18 +512,6 @@ void initCurrentBuffer(void) {
 void resetCurrentBufferLines(uint8_t y_start, uint8_t y_end) {
 	for (int i = y_start; i <= y_end; i++) {
 		memset(currentBuffer[i], 0xFF, sizeof(currentBuffer[i]));
-	}
-}
-
-void drawSomething(void) {
-	for (uint8_t row = 0; row < 240; row++) {
-		for (uint8_t col = 100; col < 150; col++) {
-			uint8_t byteIndex = col / 8;     // Find the byte in which the pixel resides
-			uint8_t bitIndex = 7 - (col % 8); // Find the position of the pixel within that byte (7 - bitIndex due to big-endian bit order)
-
-			// Clear the bit to draw a black pixel (assuming 0 is black and 1 is white)
-			currentBuffer[row][byteIndex] &= ~(1 << bitIndex);
-		}
 	}
 }
 

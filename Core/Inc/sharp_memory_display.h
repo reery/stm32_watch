@@ -52,7 +52,6 @@ void init_display(void);
 void clearDisplay(void);
 unsigned int toggle_vcom(void);
 void writeDisplayBuffer(void);
-void drawSomething(void);
 void invertDisplayBuffer(void);
 void initDisplayBuffer(void);
 void initCurrentBuffer(void);
